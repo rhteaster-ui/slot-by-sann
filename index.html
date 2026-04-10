@@ -185,6 +185,7 @@
     let bet = 50;
     let active = false;
 
+    // AUDIO SYSTEM (Path Lokal untuk Offline)
     const sfx = {
         click: new Audio('src/sfx/click.mp3'),
         spin: new Audio('src/sfx/spin.mp3'),
@@ -267,14 +268,11 @@
         document.getElementById('balanceText').innerText = credits.toLocaleString();
     }
 
-    // SERVICE WORKER REGISTRATION (Wajib untuk Offline & Ikon)
     if ('serviceWorker' in navigator) {
         window.addEventListener('load', () => {
-            navigator.serviceWorker.register('sw.js').then(reg => {
-                console.log('SW Registered');
-            }).catch(err => console.log('SW Failed', err));
+            navigator.serviceWorker.register('sw.js');
         });
     }
 </script>
 </body>
-    </html>
+        </html>
