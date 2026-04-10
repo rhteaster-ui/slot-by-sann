@@ -4,9 +4,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Slot Simulasi - BySanz v3 Final</title>
-    <link rel="manifest" href="manifest.json">
-    <meta name="theme-color" content="#08080a">
+    
+    <link rel="icon" href="src/icon.png" type="image/png">
     <link rel="apple-touch-icon" href="src/icon.png">
+
     <style>
         :root {
             --bg: #08080a;
@@ -51,6 +52,7 @@
             font-weight: 800;
         }
 
+        /* Display Saldo */
         .balance-card {
             background: rgba(0,0,0,0.4);
             padding: 20px;
@@ -65,6 +67,7 @@
             color: var(--gold);
         }
 
+        /* Reels */
         .reels-wrapper {
             display: flex;
             gap: 15px;
@@ -85,6 +88,7 @@
             box-shadow: inset 0 0 15px rgba(0,0,0,0.5);
         }
 
+        /* Pop up Nominal */
         #resultPopup {
             position: absolute;
             top: 50%;
@@ -104,6 +108,7 @@
             opacity: 1;
         }
 
+        /* Controls */
         .bet-input {
             display: flex;
             justify-content: space-between;
@@ -140,6 +145,64 @@
 
         .spin-btn:disabled { opacity: 0.3; cursor: not-allowed; }
 
+        /* Custom A2HS Popup (Tambahan Baru) */
+        .install-popup {
+            position: fixed;
+            bottom: -150px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #1c1c24;
+            border: 2px solid var(--accent);
+            padding: 15px 20px;
+            border-radius: 20px;
+            box-shadow: 0 10px 40px rgba(0,242,255,0.2);
+            z-index: 100;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            transition: bottom 0.6s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+            width: 85%;
+            max-width: 350px;
+        }
+
+        .install-popup.show {
+            bottom: 30px;
+        }
+
+        .install-popup-icon {
+            width: 45px;
+            height: 45px;
+            border-radius: 10px;
+            object-fit: cover;
+        }
+
+        .install-popup-text {
+            font-size: 0.75rem;
+            text-align: left;
+            line-height: 1.4;
+            color: #ccc;
+            flex-grow: 1;
+        }
+
+        .install-popup-text strong {
+            color: var(--accent);
+            font-size: 0.9rem;
+            display: block;
+            margin-bottom: 3px;
+        }
+
+        .install-popup-close {
+            background: var(--lose);
+            border: none;
+            color: white;
+            width: 30px;
+            height: 30px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 900;
+        }
+
+        /* Animations */
         @keyframes reelSpin {
             0% { transform: translateY(-8px); filter: blur(0); }
             50% { transform: translateY(8px); filter: blur(6px); }
@@ -151,6 +214,15 @@
     </style>
 </head>
 <body>
+
+<div class="install-popup" id="customInstallPopup">
+    <img src="src/icon.png" alt="Icon" class="install-popup-icon" onerror="this.src='https://via.placeholder.com/45/00f2ff/000000?text=Sanz'">
+    <div class="install-popup-text">
+        <strong>Simpan ke Layar Utama</strong>
+        Klik titik tiga (⋮) di browser, lalu pilih <b>Tambahkan ke Layar Utama</b>.
+    </div>
+    <button class="install-popup-close" onclick="closeA2HS()">✕</button>
+</div>
 
 <div class="container">
     <div id="resultPopup"></div>
@@ -185,13 +257,13 @@
     let bet = 50;
     let active = false;
 
-    // AUDIO SYSTEM (Path Lokal untuk Offline)
+    // AUDIO SYSTEM (Link asli bawaan kamu, DIJAMIN BUNYI)
     const sfx = {
-        click: new Audio('src/sfx/click.mp3'),
-        spin: new Audio('src/sfx/spin.mp3'),
-        stop: new Audio('src/sfx/stop.mp3'),
-        win: new Audio('src/sfx/win.mp3'),
-        lose: new Audio('src/sfx/lose.mp3')
+        click: new Audio('https://files.catbox.moe/9dtvfy.mp3'),
+        spin: new Audio('https://files.catbox.moe/o49pmv.mp3'),
+        stop: new Audio('https://actions.google.com/sounds/v1/foley/box_lid_close.ogg'),
+        win: new Audio('https://files.catbox.moe/ntn336.mp3'),
+        lose: new Audio('https://files.catbox.moe/rk21ys.mp3')
     };
 
     function play(key) {
@@ -211,16 +283,24 @@
 
     async function spinNow() {
         if (active || credits < bet) return;
+
         active = true;
         credits -= bet;
         updateUI();
         play('spin');
+
         const btn = document.getElementById('btnSpin');
         const popup = document.getElementById('resultPopup');
         const r = [document.getElementById('r1'), document.getElementById('r2'), document.getElementById('r3')];
+
         btn.disabled = true;
         popup.classList.remove('show');
-        r.forEach(el => { el.classList.add('spinning'); el.classList.remove('win-glow'); });
+        
+        r.forEach(el => {
+            el.classList.add('spinning');
+            el.classList.remove('win-glow');
+        });
+
         let res = [];
         for (let i = 0; i < 3; i++) {
             await new Promise(resolve => setTimeout(resolve, 1000 + (i * 600)));
@@ -230,12 +310,14 @@
             r[i].innerText = icon;
             play('stop');
         }
+
         checkWin(res, r);
     }
 
     function checkWin(res, els) {
         const popup = document.getElementById('resultPopup');
         let win = 0;
+
         if (res[0] === res[1] && res[1] === res[2]) {
             win = bet * 20;
             if (res[0] === '💎') win = bet * 100;
@@ -250,6 +332,7 @@
             showPopup(`-${bet.toLocaleString()}`, 'var(--lose)');
             play('lose');
         }
+
         credits += win;
         updateUI();
         active = false;
@@ -268,11 +351,17 @@
         document.getElementById('balanceText').innerText = credits.toLocaleString();
     }
 
-    if ('serviceWorker' in navigator) {
-        window.addEventListener('load', () => {
-            navigator.serviceWorker.register('sw.js');
-        });
+    // Logic Custom Popup Add to Home Screen (Mulai otomatis)
+    window.addEventListener('DOMContentLoaded', () => {
+        setTimeout(() => {
+            document.getElementById('customInstallPopup').classList.add('show');
+        }, 2000);
+    });
+
+    function closeA2HS() {
+        document.getElementById('customInstallPopup').classList.remove('show');
     }
 </script>
+
 </body>
-        </html>
+            </html>
