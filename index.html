@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Slot Simulasi - BySanz v3 Final</title>
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#08080a">
+    <link rel="apple-touch-icon" href="src/icon.png">
+    
+    <style>
+        :root {
+            --bg: #08080a;
+            --panel: #121217;
+            --accent: #00f2ff;
+            --gold: #ffcc00;
+            --lose: #ff4d4d;
+            --text: #ffffff;
+        }
+
+        body {
+            font-family: sans-serif; /* Fallback untuk offline tanpa Google Fonts */
+            background-color: var(--bg);
+            color: var(--text);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            overflow: hidden;
+            user-select: none;
+        }
+
+        .container {
+            width: 90%;
+            max-width: 400px;
+            background: var(--panel);
+            padding: 35px 25px;
+            border-radius: 40px;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            text-align: center;
+            position: relative;
+            box-shadow: 0 30px 60px rgba(0,0,0,0.8);
+        }
+
+        .brand {
+            font-size: 0.6rem;
+            letter-spacing: 5px;
+            color: var(--accent);
+            margin-bottom: 25px;
+            opacity: 0.8;
+            font-weight: 800;
+        }
+
+        .balance-card {
+            background: rgba(0,0,0,0.4);
+            padding: 20px;
+            border-radius: 25px;
+            margin-bottom: 30px;
+            border-bottom: 3px solid var(--accent);
+        }
+
+        .balance-value {
+            font-size: 2.2rem;
+            font-weight: 900;
+            color: var(--gold);
+        }
+
+        .reels-wrapper {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            margin-bottom: 35px;
+        }
+
+        .reel {
+            width: 95px;
+            height: 125px;
+            background: #1c1c24;
+            border-radius: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 3.5rem;
+            border: 1px solid rgba(255,255,255,0.03);
+            box-shadow: inset 0 0 15px rgba(0,0,0,0.5);
+        }
+
+        #resultPopup {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%) scale(0);
+            font-size: 3rem;
+            font-weight: 900;
+            z-index: 10;
+            pointer-events: none;
+            transition: all 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            white-space: nowrap;
+            text-shadow: 0 0 20px rgba(0,0,0,0.5);
+        }
+
+        #resultPopup.show {
+            transform: translate(-50%, -120%) scale(1.2);
+            opacity: 1;
+        }
+
+        .bet-input {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: rgba(255,255,255,0.03);
+            padding: 12px 20px;
+            border-radius: 20px;
+            margin-bottom: 25px;
+        }
+
+        .bet-btn {
+            background: var(--accent);
+            border: none;
+            width: 40px;
+            height: 40px;
+            border-radius: 12px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 1.2rem;
+        }
+
+        .spin-btn {
+            width: 100%;
+            padding: 22px;
+            border-radius: 25px;
+            border: none;
+            background: linear-gradient(135deg, var(--accent), #0077ff);
+            color: #000;
+            font-weight: 900;
+            font-size: 1.3rem;
+            cursor: pointer;
+            transition: 0.3s;
+        }
+
+        .spin-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+
+        @keyframes reelSpin {
+            0% { transform: translateY(-8px); filter: blur(0); }
+            50% { transform: translateY(8px); filter: blur(6px); }
+            100% { transform: translateY(-8px); filter: blur(0); }
+        }
+
+        .spinning { animation: reelSpin 0.12s infinite; }
+        .win-glow { border-color: var(--gold); box-shadow: 0 0 25px rgba(255, 204, 0, 0.5); }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div id="resultPopup"></div>
+    <div class="brand">BY SANZ SIMULATION V3</div>
+    
+    <div class="balance-card">
+        <div style="font-size: 0.7rem; color: #888;">CREDITS</div>
+        <div class="balance-value" id="balanceText">10,000</div>
+    </div>
+
+    <div class="reels-wrapper">
+        <div class="reel" id="r1">🍎</div>
+        <div class="reel" id="r2">🍇</div>
+        <div class="reel" id="r3">🍒</div>
+    </div>
+
+    <div class="bet-input">
+        <button class="bet-btn" onclick="adjust(-50)">-</button>
+        <div>
+            <div style="font-size: 0.6rem; color: #777;">BET</div>
+            <div id="betText" style="font-weight: 800; font-size: 1.2rem;">50</div>
+        </div>
+        <button class="bet-btn" onclick="adjust(50)">+</button>
+    </div>
+
+    <button class="spin-btn" id="btnSpin" onclick="spinNow()">SPIN</button>
+</div>
+
+<script>
+    const items = ['🍎', '🍇', '🍒', '🍋', '🍉', '🍍', '🍓', '💎'];
+    let credits = 10000;
+    let bet = 50;
+    let active = false;
+
+    // AUDIO SYSTEM (Path Lokal untuk Offline)
+    const sfx = {
+        click: new Audio('src/sfx/click.mp3'),
+        spin: new Audio('src/sfx/spin.mp3'),
+        stop: new Audio('src/sfx/stop.mp3'),
+        win: new Audio('src/sfx/win.mp3'),
+        lose: new Audio('src/sfx/lose.mp3')
+    };
+
+    function play(key) {
+        sfx[key].currentTime = 0;
+        sfx[key].play().catch(() => {});
+    }
+
+    function adjust(v) {
+        if (active) return;
+        play('click');
+        let next = bet + v;
+        if (next >= 50 && next <= credits) {
+            bet = next;
+            document.getElementById('betText').innerText = bet.toLocaleString();
+        }
+    }
+
+    async function spinNow() {
+        if (active || credits < bet) return;
+
+        active = true;
+        credits -= bet;
+        updateUI();
+        play('spin');
+
+        const btn = document.getElementById('btnSpin');
+        const popup = document.getElementById('resultPopup');
+        const r = [document.getElementById('r1'), document.getElementById('r2'), document.getElementById('r3')];
+
+        btn.disabled = true;
+        popup.classList.remove('show');
+        
+        r.forEach(el => {
+            el.classList.add('spinning');
+            el.classList.remove('win-glow');
+        });
+
+        let res = [];
+        for (let i = 0; i < 3; i++) {
+            await new Promise(resolve => setTimeout(resolve, 1000 + (i * 600)));
+            let icon = items[Math.floor(Math.random() * items.length)];
+            res.push(icon);
+            r[i].classList.remove('spinning');
+            r[i].innerText = icon;
+            play('stop');
+        }
+
+        checkWin(res, r);
+    }
+
+    function checkWin(res, els) {
+        const popup = document.getElementById('resultPopup');
+        let win = 0;
+
+        if (res[0] === res[1] && res[1] === res[2]) {
+            win = bet * 20;
+            if (res[0] === '💎') win = bet * 100;
+            showPopup(`+${win.toLocaleString()}`, 'var(--gold)');
+            els.forEach(el => el.classList.add('win-glow'));
+            play('win');
+        } else if (res[0] === res[1] || res[1] === res[2] || res[0] === res[2]) {
+            win = Math.floor(bet * 2.5);
+            showPopup(`+${win.toLocaleString()}`, 'var(--accent)');
+            play('win');
+        } else {
+            showPopup(`-${bet.toLocaleString()}`, 'var(--lose)');
+            play('lose');
+        }
+
+        credits += win;
+        updateUI();
+        active = false;
+        document.getElementById('btnSpin').disabled = false;
+    }
+
+    function showPopup(txt, color) {
+        const p = document.getElementById('resultPopup');
+        p.innerText = txt;
+        p.style.color = color;
+        p.classList.add('show');
+        setTimeout(() => p.classList.remove('show'), 2000);
+    }
+
+    function updateUI() {
+        document.getElementById('balanceText').innerText = credits.toLocaleString();
+    }
+
+    // Register Service Worker untuk PWA Offline
+    if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+            navigator.serviceWorker.register('sw.js');
+        });
+    }
+</script>
+
+</body>
+</html>
